@@ -31,12 +31,6 @@ public class APICallService {
 
     /**
      * Invoke an AWS Endpoint with AWS4 Signature. The Credential provider will assume the role attached to it using "DefaultCredentialProvider.create()"
-     *
-     * @param endpoint
-     * @param serviceName
-     * @param region
-     * @return
-     * @throws IOException
      */
     public HttpResponse invokeAWSEndpoint(String endpoint, String serviceName, Region region, String body, Map<String, String> headers) throws IOException {
         HttpRequestInterceptor interceptor = new AwsRequestSigningApacheInterceptor(serviceName, Aws4Signer.create(), DefaultCredentialsProvider.create(), region);
@@ -52,9 +46,10 @@ public class APICallService {
                 httpPost.addHeader(entry.getKey(), entry.getValue());
             }
 
-        CloseableHttpClient closeableHttpClient = HttpClients.custom().addInterceptorLast(interceptor).build();
-        org.apache.http.HttpResponse httpResponse = closeableHttpClient.execute(httpPost);
-
-        return httpResponse;
+        try (CloseableHttpClient httpClient = HttpClients.custom().addInterceptorLast(interceptor).build()) {
+            return httpClient.execute(httpPost);
+        } catch (IOException e) {
+            throw new IOException(e);
+        }
     }
 }
