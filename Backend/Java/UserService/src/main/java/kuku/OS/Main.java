@@ -1,29 +1,26 @@
 package kuku.OS;
 
-
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.google.gson.Gson;
 import kuku.OS.enums.ConnectionType;
 import kuku.OS.model.ResponseModel;
 import kuku.OS.model.UserEntity;
 import kuku.OS.service.APICallService;
-import kuku.OS.service.JWTService;
 import kuku.OS.util.EnvironmentVariablesUtil;
 import kuku.OS.util.PayloadHelper;
 import org.apache.http.HttpResponse;
 import software.amazon.awssdk.regions.Region;
 
+import java.util.Map;
+
 public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-
-
-    private final Gson gson = new Gson();
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent requestEvent, Context context) {
-        String dbEndpoint = "https://7fkgoc5qr4.execute-api.ap-south-1.amazonaws.com/DEV/private/db-service/users";
+        String dbEndpoint = "https://7fkgoc5qr4.execute-api.ap-south-1.amazonaws.com/DEV/private/db-service";
+        String authEndpoint = "https://7fkgoc5qr4.execute-api.ap-south-1.amazonaws.com/DEV/private/authService";
         var log = context.getLogger();
 
         APICallService callService = APICallService.getInstance();
@@ -41,13 +38,19 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
                     UserEntity user = PayloadHelper.parseUserFromPayload(body);
                     String payload = PayloadHelper.createUserPayload(user, "user.getUserByIdAndPassword");
                     HttpResponse response = callService.invokeAWSEndpoint(ConnectionType.POST, dbEndpoint, "execute-api", Region.AP_SOUTH_1, payload, null); //Send Post request to database service
-                    if (response.getStatusLine().getStatusCode() == 200) {
-                        JWTService jwtService = JWTService.getInstance();
-                        String token = jwtService.createToken(user.getUserId());
-                        return sendResponse(200, ResponseModel.jsonResponseModel("Successfully Generated JWT Token", token));
+                    if (response.getStatusLine().getStatusCode() != 200) {
+                        String responseModelString = PayloadHelper.parseHttpPayloadToResponseModelString(response);
+                        return sendResponse(response.getStatusLine().getStatusCode(), "FAILED DBSERVICE " + responseModelString);
                     }
-                    String responseModelString = PayloadHelper.parseHttpPayloadToResponseModelString(response);
-                    return sendResponse(response.getStatusLine().getStatusCode(), responseModelString);
+                    payload = PayloadHelper.createGenerateTokenPayload(Map.of("userId", user.getUserId()));
+                    response = callService.invokeAWSEndpoint(ConnectionType.POST, authEndpoint, "execute-api", Region.AP_SOUTH_1, payload, null);
+                    if (response.getStatusLine().getStatusCode() != 200) {
+                        String responseModelString = PayloadHelper.parseHttpPayloadToResponseModelString(response);
+                        return sendResponse(response.getStatusLine().getStatusCode(), "FAILED AUTH SERVICE CALL " + responseModelString);
+                    }
+                    ResponseModel responseModel = PayloadHelper.parseHttpPayloadToResponseModelObj(response);
+                    String token = (String) responseModel.getData();
+                    return sendResponse(200, ResponseModel.jsonResponseModel("Successfully Generated JWT Token", token));
                 }
                 case "PUT" -> {
                     //CASE SIGN UP
@@ -60,12 +63,9 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
             }
             return sendResponse(260, ResponseModel.jsonResponseModel("WTF", null));
         } catch (Exception e) {
-            return sendResponse(500, ResponseModel.jsonResponseModel(e.getMessage(), null));
-
+            return sendResponse(500, ResponseModel.jsonResponseModel("USER SERVICE : " + e.getMessage(), null));
         }
     }
-
-
 
 
     private APIGatewayProxyResponseEvent sendResponse(int statusCode, String body) {

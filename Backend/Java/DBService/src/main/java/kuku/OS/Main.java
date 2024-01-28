@@ -91,18 +91,15 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
                     if (result.getValue1()) {
                         return sendResponse(new ResponseModel<>("User Created Successfully", null), 200);
                     }
-                    return sendResponse(new ResponseModel<>("Something went wrong. Failed to create new Use Record", null), 500);
+                    return sendResponse(new ResponseModel<>("DB SERVICE : Something went wrong. Failed to create new Use Record", null), 500);
                 }
             }
 
 
             UserEntity user = service.getUser("test");
             return new APIGatewayProxyResponseEvent().withBody(gson.toJson(user));
-
-        } catch (FileNotFoundException e) {
-            return sendResponse(new ResponseModel<>(e.getMessage(), null), 404);
         } catch (Exception e) {
-            return sendResponse(new ResponseModel<>(e.getMessage(), null), 500);
+            return sendResponse(new ResponseModel<>("DB SERVICE EXCEPTION " + e.getMessage(), null), 500);
         }
 
     }

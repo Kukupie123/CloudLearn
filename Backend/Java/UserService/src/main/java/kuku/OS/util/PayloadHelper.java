@@ -61,4 +61,11 @@ public class PayloadHelper {
         Map<String, Object> respMap = gson.fromJson(body, type);
         return new ResponseModel<>((String) respMap.get("msg"), respMap.get("data"));
     }
+
+    public static String createGenerateTokenPayload(Map<String, String> claims) {
+        Map<String, String> payloadMap = new HashMap<>();
+        payloadMap.put("action", "generateToken");
+        payloadMap.put("claims", gson.toJson(claims));
+        return gson.toJson(payloadMap);
+    }
 }
