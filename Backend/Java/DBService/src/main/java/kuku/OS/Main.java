@@ -14,6 +14,8 @@ import kuku.OS.service.db.DBService;
 import org.javatuples.Pair;
 
 import java.io.FileNotFoundException;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Map;
 
 
@@ -41,8 +43,31 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
                 throw new ExceptionEmptyBody("Body is empty");
             }
 
-            Map bodyMap = gson.fromJson(body, Map.class);
-            String action = (String) bodyMap.get("action");
+            //NOTE : Since gson.fromJason's second parameter requires a class type we can't pass Map<String,String>.class, so we have to create a ParameterizedType to create a dynamic type using java's reflection power
+            Type type = new ParameterizedType() {
+                ///Returns the actual generic types. In our case it's a map of <String,String>
+                @Override
+                public Type[] getActualTypeArguments() {
+                    Type[] type = new Type[2];
+                    type[0] = String.class;
+                    type[1] = String.class;
+                    return type;
+                }
+
+                ///Returns the raw class that is specifying the generic types
+                @Override
+                public Type getRawType() {
+                    return Map.class;
+                }
+
+                ///Returns Super class type.
+                @Override
+                public Type getOwnerType() {
+                    return Object.class;
+                }
+            };
+            Map<String, String> bodyMap = gson.fromJson(body, type);
+            String action = bodyMap.get("action");
 
             if (action == null) {
                 throw new ExceptionNoActionInPayload("Payload Has no action");
@@ -51,8 +76,8 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
 
             switch (action) {
                 case "user.getUserByIdAndPassword" -> {
-                    String userID = (String) bodyMap.get("userId");
-                    String password = (String) bodyMap.get("password");
+                    String userID = bodyMap.get("userId");
+                    String password = bodyMap.get("password");
                     UserEntity user = service.getUser(userID, password);
                     if (user == null) {
                         throw new FileNotFoundException("User with ID " + userID + " and Password : " + password + " not found.");
@@ -60,8 +85,8 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
                     return sendResponse(new ResponseModel<>(null, user), 200);
                 }
                 case "user.createUser" -> {
-                    String userID = (String) bodyMap.get("userId");
-                    String password = (String) bodyMap.get("password");
+                    String userID = bodyMap.get("userId");
+                    String password = bodyMap.get("password");
                     Pair<String, Boolean> result = service.createUser(userID, password);
                     if (result.getValue1()) {
                         return sendResponse(new ResponseModel<>("User Created Successfully", null), 200);
@@ -82,7 +107,15 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
 
     }
 
-    private APIGatewayProxyResponseEvent sendResponse(ResponseModel resp, int statusCode) {
+    /**
+     * Sends a response with the given response model and status code.
+     *
+     * @param resp       the response model to be sent
+     * @param statusCode the status code of the response
+     * @return the APIGatewayProxyResponseEvent containing the response and status code
+     */
+    ///NOTE : private <T> is used to specify the type of T for ResponseModel as it is a class with Generics
+    private <T> APIGatewayProxyResponseEvent sendResponse(ResponseModel<T> resp, int statusCode) {
         return new APIGatewayProxyResponseEvent().withBody(gson.toJson(resp)).withStatusCode(statusCode);
     }
 }

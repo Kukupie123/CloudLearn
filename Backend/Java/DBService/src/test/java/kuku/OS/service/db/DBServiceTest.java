@@ -5,11 +5,8 @@ import org.javatuples.Pair;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junitpioneer.jupiter.SetEnvironmentVariable;
 
 
-@SetEnvironmentVariable(key = "DB_USER", value = "kuku")
-@SetEnvironmentVariable(key = "DB_PASSWORD", value = "kuku")
 class DBServiceTest {
     DBService service = DBService.instance();
 
