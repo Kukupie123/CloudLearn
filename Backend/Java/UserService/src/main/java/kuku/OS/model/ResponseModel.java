@@ -8,7 +8,7 @@ public class ResponseModel<T> {
     private String msg;
     private T data;
 
-    private ResponseModel(String msg, T data) {
+    public ResponseModel(String msg, T data) {
         this.data = data;
         this.msg = msg;
     }

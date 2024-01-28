@@ -6,17 +6,15 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.Gson;
+import kuku.OS.enums.ConnectionType;
 import kuku.OS.model.ResponseModel;
 import kuku.OS.model.UserEntity;
 import kuku.OS.service.APICallService;
 import kuku.OS.service.JWTService;
 import kuku.OS.util.EnvironmentVariablesUtil;
+import kuku.OS.util.PayloadHelper;
 import org.apache.http.HttpResponse;
-import org.apache.http.util.EntityUtils;
 import software.amazon.awssdk.regions.Region;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -25,12 +23,6 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent requestEvent, Context context) {
-        /**
-         * Important Notes
-         * We can use STS to get session credentials
-         * DefaultCredentialsProvider will assume the role attached to it. so make sure your attached role has the right permissions set.
-         */
-
         String dbEndpoint = "https://7fkgoc5qr4.execute-api.ap-south-1.amazonaws.com/DEV/private/db-service/users";
         var log = context.getLogger();
 
@@ -43,29 +35,27 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
             String body = requestEvent.getBody();
 
             switch (method) {
-                case "POST": {
+                case "POST" -> {
                     log.log("POST REQUEST : LOGIN");
                     //CASE LOGIN
-                    UserEntity user = gson.fromJson(body, UserEntity.class);
-                    log.log("USER : " + user.getUserId() + " " + user.getPassword());
-                    Map<String, String> payloadMap = new HashMap<>(); //Create payload to send post request to database service
-                    payloadMap.put("action", "user.getUserByIdAndPassword");
-                    payloadMap.put("userId", user.getUserId());
-                    payloadMap.put("password", user.getPassword());
-                    String payload = gson.toJson(payloadMap);
-                    HttpResponse response = callService.invokeAWSEndpoint(dbEndpoint, "execute-api", Region.AP_SOUTH_1, payload, null); //Send Post request to database service
-                    String responseString = EntityUtils.toString(response.getEntity());
-                    Map respponseMap = gson.fromJson(responseString, Map.class);
-                    if (response.getStatusLine().getStatusCode() != 200) {
-                        return sendResponse(response.getStatusLine().getStatusCode(), ResponseModel.jsonResponseModel((String) respponseMap.get("msg"), null));
+                    UserEntity user = PayloadHelper.parseUserFromPayload(body);
+                    String payload = PayloadHelper.createUserPayload(user, "user.getUserByIdAndPassword");
+                    HttpResponse response = callService.invokeAWSEndpoint(ConnectionType.POST, dbEndpoint, "execute-api", Region.AP_SOUTH_1, payload, null); //Send Post request to database service
+                    if (response.getStatusLine().getStatusCode() == 200) {
+                        JWTService jwtService = JWTService.getInstance();
+                        String token = jwtService.createToken(user.getUserId());
+                        return sendResponse(200, ResponseModel.jsonResponseModel("Successfully Generated JWT Token", token));
                     }
-                    JWTService jwtService = JWTService.getInstance();
-                    String token = jwtService.createToken(user.getUserId());
-                    return sendResponse(200, ResponseModel.jsonResponseModel("Successfully Generated JWT Token", token));
-
+                    String responseModelString = PayloadHelper.parseHttpPayloadToResponseModelString(response);
+                    return sendResponse(response.getStatusLine().getStatusCode(), responseModelString);
                 }
-                case "PUT": {
+                case "PUT" -> {
                     //CASE SIGN UP
+                    UserEntity user = PayloadHelper.parseUserFromPayload(body);
+                    String payload = PayloadHelper.createUserPayload(user, "user.createUser");
+                    HttpResponse response = callService.invokeAWSEndpoint(ConnectionType.POST, dbEndpoint, "execute-api", Region.AP_SOUTH_1, payload, null);
+                    String responseModelString = PayloadHelper.parseHttpPayloadToResponseModelString(response);
+                    return sendResponse(response.getStatusLine().getStatusCode(), responseModelString);
                 }
             }
             return sendResponse(260, ResponseModel.jsonResponseModel("WTF", null));
@@ -74,6 +64,9 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
 
         }
     }
+
+
+
 
     private APIGatewayProxyResponseEvent sendResponse(int statusCode, String body) {
         return new APIGatewayProxyResponseEvent().withStatusCode(statusCode).withBody(body);

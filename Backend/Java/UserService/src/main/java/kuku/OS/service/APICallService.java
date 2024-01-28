@@ -1,9 +1,10 @@
 package kuku.OS.service;
 
 import io.github.acm19.aws.interceptor.http.AwsRequestSigningApacheInterceptor;
+import kuku.OS.enums.ConnectionType;
 import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.*;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -32,22 +33,34 @@ public class APICallService {
     /**
      * Invoke an AWS Endpoint with AWS4 Signature. The Credential provider will assume the role attached to it using "DefaultCredentialProvider.create()"
      */
-    public HttpResponse invokeAWSEndpoint(String endpoint, String serviceName, Region region, String body, Map<String, String> headers) throws IOException {
+    public HttpResponse invokeAWSEndpoint(ConnectionType connectionType, String endpoint, String serviceName, Region region, String body, Map<String, String> headers) throws IOException {
+        /*
+        Basically what it's doing is
+        Getting the session's credential and then using it to create an AWS4 signed url.
+         */
         HttpRequestInterceptor interceptor = new AwsRequestSigningApacheInterceptor(serviceName, Aws4Signer.create(), DefaultCredentialsProvider.create(), region);
-        HttpPost httpPost = new HttpPost(endpoint);
 
-        // Set body
-        StringEntity bodyEntity = new StringEntity(body, ContentType.APPLICATION_JSON);
-        httpPost.setEntity(bodyEntity);
+        HttpRequestBase request = switch (connectionType) {
+            case POST -> new HttpPost(endpoint);
+            case PUT -> new HttpPut(endpoint);
+            case GET -> new HttpGet(endpoint);
+        };
+
+        if (connectionType != ConnectionType.GET) {
+            // Set body
+            StringEntity bodyEntity = new StringEntity(body, ContentType.APPLICATION_JSON);
+            ((HttpEntityEnclosingRequestBase) request).setEntity(bodyEntity);
+        }
+
 
         if (headers != null)
             // Set headers
             for (Map.Entry<String, String> entry : headers.entrySet()) {
-                httpPost.addHeader(entry.getKey(), entry.getValue());
+                request.addHeader(entry.getKey(), entry.getValue());
             }
 
         try (CloseableHttpClient httpClient = HttpClients.custom().addInterceptorLast(interceptor).build()) {
-            return httpClient.execute(httpPost);
+            return httpClient.execute(request);
         } catch (IOException e) {
             throw new IOException(e);
         }

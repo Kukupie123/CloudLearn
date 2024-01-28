@@ -10,7 +10,7 @@ import org.bson.Document;
 @ToString
 @Getter
 public class UserEntity {
-    private String userID;
+    private String userId;
     private String password;
 
     public static UserEntity ParseDocForUserEntity(Document doc) {
@@ -20,6 +20,13 @@ public class UserEntity {
             return new UserEntity(userID, password);
         }
         return null;
+    }
+
+    public static Document parseUserEntityForDoc(UserEntity user) {
+        Document doc = new Document();
+        doc.append("_id", user.getUserId());
+        doc.append("password", user.getPassword());
+        return doc;
     }
 
 }
