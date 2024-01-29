@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import kuku.OS.model.exception.InvalidActionInPayloadException;
 import kuku.OS.model.request.BaseRequestModel;
 import kuku.OS.model.request.GenerateTokenRequestModel;
+import kuku.OS.model.request.ValidateTokenRequestModel;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -64,6 +65,10 @@ public class GSONService {
                 String claims = map.get("claims");
                 Map<String, String> claimsMap = gson.fromJson(claims, type);
                 return new GenerateTokenRequestModel(action, claimsMap);
+            }
+            case "validateToken" -> {
+                String token = map.get("token");
+                return new ValidateTokenRequestModel(action, token);
             }
         }
         throw new InvalidActionInPayloadException("Invalid Action in Payload");

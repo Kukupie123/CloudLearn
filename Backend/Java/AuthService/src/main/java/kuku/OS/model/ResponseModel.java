@@ -11,7 +11,7 @@ public class ResponseModel<T> {
     private T data;
 
     public static <TT> String jsonResponseModel(String msg, TT data) {
-        var model = new ResponseModel<TT>(msg, data);
+        var model = new ResponseModel<TT>("Auth Service " + msg, data);
         return new Gson().toJson(model);
     }
 }

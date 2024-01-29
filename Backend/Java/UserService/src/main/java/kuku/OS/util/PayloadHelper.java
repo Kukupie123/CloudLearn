@@ -3,6 +3,7 @@ package kuku.OS.util;
 import com.google.gson.Gson;
 import kuku.OS.model.ResponseModel;
 import kuku.OS.model.UserEntity;
+import kuku.OS.model.customExceptions.InvalidAuthorizatonHeaderException;
 import kuku.OS.model.customExceptions.InvalidResponseModelPayload;
 import org.apache.http.HttpResponse;
 import org.apache.http.util.EntityUtils;
@@ -23,13 +24,13 @@ public class PayloadHelper {
     }
 
     public static String createUserPayload(UserEntity user, String action) {
-
         Map<String, String> payloadMap = new HashMap<>();
         payloadMap.put("action", action);
         payloadMap.put("userId", user.getUserId());
-        payloadMap.put("password", user.getPassword());
+        if (user.getPassword() != null) payloadMap.put("password", user.getPassword());
         return gson.toJson(payloadMap);
     }
+
 
     /**
      * Parses Http response whose payload is like Response Model into a Response Model String.
@@ -68,4 +69,22 @@ public class PayloadHelper {
         payloadMap.put("claims", gson.toJson(claims));
         return gson.toJson(payloadMap);
     }
+
+    public static String getJWTTokenFromHeader(Map<String, String> headers) throws InvalidAuthorizatonHeaderException {
+        String auth = "Authorization";
+        String token = headers.get("Authorization");
+        if (token == null || token.isEmpty() || token.isBlank()) {
+            throw new InvalidAuthorizatonHeaderException("Authorization Header is invalid. Please check your header");
+        }
+        return token;
+    }
+
+    public static String createGetClaimsFromAuthServicePayload(String token) {
+        Map<String, String> payloadMap = new HashMap<>();
+        payloadMap.put("action", "getClaimsFromToken");
+        payloadMap.put("token", token);
+        return gson.toJson(payloadMap);
+    }
+
+
 }

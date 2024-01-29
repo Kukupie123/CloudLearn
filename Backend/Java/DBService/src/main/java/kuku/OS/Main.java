@@ -95,7 +95,6 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
                 }
             }
 
-
             UserEntity user = service.getUser("test");
             return new APIGatewayProxyResponseEvent().withBody(gson.toJson(user));
         } catch (Exception e) {

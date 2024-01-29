@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import kuku.OS.enums.ConnectionType;
 import kuku.OS.model.ResponseModel;
 import kuku.OS.model.UserEntity;
+import kuku.OS.model.customExceptions.InvalidAuthorizatonHeaderException;
 import kuku.OS.service.APICallService;
 import kuku.OS.util.EnvironmentVariablesUtil;
 import kuku.OS.util.PayloadHelper;
@@ -33,6 +34,7 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
 
             switch (method) {
                 case "POST" -> {
+                    System.out.println("POST REQUEST : LOGIN.");
                     log.log("POST REQUEST : LOGIN");
                     //CASE LOGIN
                     UserEntity user = PayloadHelper.parseUserFromPayload(body);
@@ -60,8 +62,20 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
                     String responseModelString = PayloadHelper.parseHttpPayloadToResponseModelString(response);
                     return sendResponse(response.getStatusLine().getStatusCode(), responseModelString);
                 }
+                case "GET" -> {
+                    //CASE GET USER USING JWT TOKEN
+                    /*
+                    1. Get authorization header token
+                    2. Send it to AuthService to get claims
+                    3. Get userId From claim and send it to DBService to validate
+                    4. Return the user from payload
+                     */
+                }
             }
             return sendResponse(260, ResponseModel.jsonResponseModel("WTF", null));
+
+        } catch (InvalidAuthorizatonHeaderException e) {
+            return sendResponse(401, ResponseModel.jsonResponseModel(e.getMessage(), null));
         } catch (Exception e) {
             return sendResponse(500, ResponseModel.jsonResponseModel("USER SERVICE : " + e.getMessage(), null));
         }
