@@ -14,7 +14,7 @@ public class ResponseModel<T> {
     }
 
     public static <TT> String jsonResponseModel(String msg, TT data) {
-        var model = new ResponseModel<TT>(msg, data);
+        var model = new ResponseModel<TT>("USER SERVICE : " + msg, data);
         return new Gson().toJson(model);
     }
 }

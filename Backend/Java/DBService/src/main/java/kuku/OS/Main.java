@@ -84,6 +84,14 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
                     }
                     return sendResponse(new ResponseModel<>(null, user), 200);
                 }
+                case "user.getUserById" -> {
+                    String userId = bodyMap.get("userId");
+                    UserEntity user = service.getUser(userId);
+                    if (user == null) {
+                        throw new FileNotFoundException("User with ID " + userId + " not found.");
+                    }
+                    return sendResponse(new ResponseModel<>(null, user), 200);
+                }
                 case "user.createUser" -> {
                     String userID = bodyMap.get("userId");
                     String password = bodyMap.get("password");

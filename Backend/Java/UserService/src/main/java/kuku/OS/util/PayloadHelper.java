@@ -71,7 +71,6 @@ public class PayloadHelper {
     }
 
     public static String getJWTTokenFromHeader(Map<String, String> headers) throws InvalidAuthorizatonHeaderException {
-        String auth = "Authorization";
         String token = headers.get("Authorization");
         if (token == null || token.isEmpty() || token.isBlank()) {
             throw new InvalidAuthorizatonHeaderException("Authorization Header is invalid. Please check your header");

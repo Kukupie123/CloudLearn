@@ -5,28 +5,37 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.google.gson.Gson;
 import kuku.OS.model.ResponseModel;
 import kuku.OS.model.exception.EmptyPayloadException;
 import kuku.OS.model.exception.EnvironmentVariableNotFoundException;
 import kuku.OS.model.exception.InvalidActionInPayloadException;
-import kuku.OS.model.request.BaseRequestModel;
-import kuku.OS.service.GSONService;
 import kuku.OS.service.PayloadActionService;
 import kuku.OS.utils.EnvironmentVariablesUtil;
+
+import java.util.Map;
 
 public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
+        int errorCode = 469;
+        String errorMsg = "Uninitialised Error Message";
         try {
-            GSONService gson = GSONService.getInstance();
             EnvironmentVariablesUtil.VALIDATE_ENV_VARIABLES();
             String body = input.getBody();
             if (body == null || body.isBlank() || body.isEmpty()) {
                 throw new EmptyPayloadException("Empty Payload");
             }
-            BaseRequestModel requestModel = gson.getBodyMap(body);
+            Map bodyMap = new Gson().fromJson(body, Map.class);
 
-            switch (requestModel.getAction()) {
+
+            String action = (String) bodyMap.get("action");
+
+            if (action == null || action.isBlank() || action.isEmpty()) {
+                throw new InvalidActionInPayloadException("Invalid Action in Payload");
+            }
+
+            switch (action) {
                 case "generateToken" -> {
                     return PayloadActionService.getInstance().GenerateTokenAction(body);
                 }
@@ -34,15 +43,19 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
                     return PayloadActionService.getInstance().ValidateToken(body);
                 }
             }
-            return sendResponse(ResponseModel.jsonResponseModel("GGEZ", "GGEZ"), 404);
 
         } catch (JWTVerificationException e) {
-            return sendResponse(ResponseModel.jsonResponseModel("JWT Verification Failed :" + e.getMessage(), null), 401);
+            errorMsg = e.getMessage();
+            errorCode = 401;
         } catch (EmptyPayloadException | EnvironmentVariableNotFoundException | InvalidActionInPayloadException e) {
-            return sendResponse(ResponseModel.jsonResponseModel(e.getMessage(), null), 403);
+            errorMsg = e.getMessage();
+            errorCode = 403;
         } catch (Exception e) {
-            return sendResponse(ResponseModel.jsonResponseModel(e.getMessage(), null), 500);
+            errorMsg = e.getMessage();
+            errorCode = 500;
         }
+        return sendResponse(ResponseModel.jsonResponseModel(errorMsg, null), errorCode);
+
     }
 
     private APIGatewayProxyResponseEvent sendResponse(String body, int statusCode) {
