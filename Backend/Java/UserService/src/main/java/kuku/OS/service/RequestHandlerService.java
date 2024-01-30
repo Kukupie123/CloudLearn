@@ -79,7 +79,6 @@ public class RequestHandlerService {
         int errCode;
         String errMsg;
         try {
-
             //1. Parse Payload to get user data
             Map<String, String> bodyMap = gson.fromJson(body, RequestHandlerHelper.getMapType(String.class, String.class));
             String userId = bodyMap.get("userId");
@@ -107,6 +106,50 @@ public class RequestHandlerService {
             errMsg = ErrorMsgGenerator.generateErrorString(e);
         }
         return new APIGatewayProxyResponseEvent().withStatusCode(errCode).withBody(ResponseModel.jsonResponseModel(errMsg, null));
+    }
+
+    public APIGatewayProxyResponseEvent GetUserDataWithJWTToken(String token) {
+        int errCode;
+        String errMsg;
+
+        try {
+            Map<String, String> payloadMap = new HashMap<>();
+            payloadMap.put("action", "validateToken");
+            payloadMap.put("token", token);
+            String payload = gson.toJson(payloadMap);
+            HttpResponse response = APICallService.getInstance().invokeAWSEndpoint(ConnectionType.POST, authEndpoint, "execute-api", Region.AP_SOUTH_1, payload, null);
+            if (response.getStatusLine().getStatusCode() != 200) {
+                return new APIGatewayProxyResponseEvent().withStatusCode(response.getStatusLine().getStatusCode()).withBody(ResponseModel.jsonResponseModel("Failed Auth Service Call with Msg : " + EntityUtils.toString(response.getEntity()), null));
+            }
+            Map<String, String> responsePayloadMap = gson.fromJson(EntityUtils.toString(response.getEntity()), RequestHandlerHelper.getMapType(String.class, String.class));
+            String claimsString = responsePayloadMap.get("data");
+            Map<String, String> claims = gson.fromJson(claimsString, RequestHandlerHelper.getMapType(String.class, String.class));
+            String userId = claims.get("userId");
+            if (userId == null) {
+                //TODO: Throw exception
+                throw new Exception("User is missing in claims");
+            }
+            payloadMap.clear();
+            payloadMap.put("action", "user.getUserById");
+            payloadMap.put("userId", userId);
+            payload = gson.toJson(payloadMap);
+            response = APICallService.getInstance().invokeAWSEndpoint(ConnectionType.POST, dbEndpoint, "execute-api", Region.AP_SOUTH_1, payload, null);
+            if (response.getStatusLine().getStatusCode() != 200) {
+                return new APIGatewayProxyResponseEvent().withStatusCode(response.getStatusLine().getStatusCode()).withBody(ResponseModel.jsonResponseModel("Failed Db Service Call with Msg : " + EntityUtils.toString(response.getEntity()), null));
+            }
+            String responsePayload = EntityUtils.toString(response.getEntity());
+            Map<String, Object> responsePayloadMapp = gson.fromJson(responsePayload, RequestHandlerHelper.getMapType(String.class, Object.class));
+            Map userJson = (Map) responsePayloadMapp.get("data");
+            return new APIGatewayProxyResponseEvent().withStatusCode(200).withBody(ResponseModel.jsonResponseModel("Successfully fetched user", userJson));
+
+        } catch (Exception e) {
+            errCode = 500;
+            errMsg = ErrorMsgGenerator.generateErrorString(e);
+        }
+
+        return new APIGatewayProxyResponseEvent().withStatusCode(errCode).withBody(ResponseModel.jsonResponseModel(errMsg, null));
+
+
     }
 
 }
