@@ -7,6 +7,7 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import kuku.OS.util.EnvironmentVariablesUtil;
 
 import java.util.Calendar;
+import java.util.Map;
 
 public class JWTService {
     private JWTService() {
@@ -26,11 +27,17 @@ public class JWTService {
 
     private static final Algorithm algorithm = Algorithm.HMAC256(EnvironmentVariablesUtil.JWT_SECRET_ENV);
 
-    public String createToken(String userId) throws Exception {
+    public String createJWTToken(Map<String, String> claims) throws Exception {
         Calendar calendar = Calendar.getInstance();
         int expirationType = helperFunctions.parseExpirationType(EnvironmentVariablesUtil.JWT_EXPIRATION_TYPE_ENV);
         calendar.add(expirationType, EnvironmentVariablesUtil.JWT_EXPIRATION_TIME_ENV); // Token expires in specified Time
-        return JWT.create().withClaim("userId", userId).withExpiresAt(calendar.getTime()).sign(algorithm);
+        var token = JWT.create().withExpiresAt(calendar.getTime());
+        if (claims != null) {
+            for (var c : claims.keySet()) {
+                token = token.withClaim(c, claims.get(c));
+            }
+        }
+        return token.sign(algorithm);
     }
 
     public DecodedJWT verifyToken(String token) {

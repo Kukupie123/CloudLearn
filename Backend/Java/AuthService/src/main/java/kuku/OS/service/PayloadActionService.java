@@ -3,7 +3,6 @@ package kuku.OS.service;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.google.gson.Gson;
 import kuku.OS.model.ResponseModel;
 import kuku.OS.model.exception.InvalidEnvironmentVariable;
 import kuku.OS.model.exception.NoTokenInPayloadException;
@@ -47,9 +46,9 @@ public class PayloadActionService {
 
         try {
             //Get claims from payload
-            Map<String, String> bodyMap = new Gson().fromJson(body, PayloadActionHelper.getDynamicMapType(String.class, String.class)); //Convert String Body to map
+            Map<String, String> bodyMap = GSONService.getInstance().gson.fromJson(body, PayloadActionHelper.getDynamicMapType(String.class, String.class)); //Convert String Body to map
             String claimsString = bodyMap.get("claims"); //Get claims
-            Map<String, String> claims = new Gson().fromJson(claimsString, PayloadActionHelper.getDynamicMapType(String.class, String.class));  //Claims is a Map in form of string, so we can get its map representation
+            Map<String, String> claims = GSONService.getInstance().gson.fromJson(claimsString, PayloadActionHelper.getDynamicMapType(String.class, String.class));  //Claims is a Map in form of string, so we can get its map representation
             String token = JWTService.getInstance().createToken(claims);
             return new APIGatewayProxyResponseEvent().withBody(ResponseModel.jsonResponseModel("Generated JWT Token", token)).withStatusCode(200);
         } catch (InvalidEnvironmentVariable e) {
@@ -81,7 +80,7 @@ public class PayloadActionService {
         int errorStatusCode;
         String errorMsg;
         try {
-            Map<String, String> bodyMap = new Gson().fromJson(body, PayloadActionHelper.getDynamicMapType(String.class, String.class));
+            Map<String, String> bodyMap = GSONService.getInstance().gson.fromJson(body, PayloadActionHelper.getDynamicMapType(String.class, String.class));
             String token = bodyMap.get("token");
             if (token == null || token.isBlank() || token.isEmpty()) {
                 throw new NoTokenInPayloadException("Token not found in payload");
@@ -92,7 +91,7 @@ public class PayloadActionService {
             for (String k : claimsMap.keySet()) {
                 claimsMapString.put(k, claimsMap.get(k).asString());
             }
-            String claimsString = new Gson().toJson(claimsMapString);
+            String claimsString = GSONService.getInstance().gson.toJson(claimsMapString);
             return new APIGatewayProxyResponseEvent().withStatusCode(200).withBody(ResponseModel.jsonResponseModel(null, claimsString));
         } catch (NoTokenInPayloadException e) {
             errorStatusCode = 401;

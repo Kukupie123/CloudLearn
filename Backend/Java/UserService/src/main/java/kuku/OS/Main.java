@@ -7,11 +7,11 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.google.gson.Gson;
 import kuku.OS.enums.ConnectionType;
 import kuku.OS.model.ResponseModel;
-import kuku.OS.model.UserEntity;
 import kuku.OS.model.customExceptions.InvalidAuthorizatonHeaderException;
 import kuku.OS.service.APICallService;
+import kuku.OS.service.RequestHandlerService;
 import kuku.OS.util.EnvironmentVariablesUtil;
-import kuku.OS.util.PayloadHelper;
+import kuku.OS.util.ErrorMsgGenerator;
 import org.apache.http.HttpResponse;
 import org.apache.http.util.EntityUtils;
 import software.amazon.awssdk.regions.Region;
@@ -39,33 +39,11 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
 
             switch (method) {
                 case "POST" -> {
-                    System.out.println("POST REQUEST : LOGIN.");
-                    log.log("POST REQUEST : LOGIN");
-                    //CASE LOGIN
-                    UserEntity user = PayloadHelper.parseUserFromPayload(body);
-                    String payload = PayloadHelper.createUserPayload(user, "user.getUserByIdAndPassword");
-                    HttpResponse response = callService.invokeAWSEndpoint(ConnectionType.POST, dbEndpoint, "execute-api", Region.AP_SOUTH_1, payload, null); //Send Post request to database service
-                    if (response.getStatusLine().getStatusCode() != 200) {
-                        String responseModelString = PayloadHelper.parseHttpPayloadToResponseModelString(response);
-                        return sendResponse(response.getStatusLine().getStatusCode(), ResponseModel.jsonResponseModel("FAILED DB CALL : " + responseModelString, null));
-                    }
-                    payload = PayloadHelper.createGenerateTokenPayload(Map.of("userId", user.getUserId()));
-                    response = callService.invokeAWSEndpoint(ConnectionType.POST, authEndpoint, "execute-api", Region.AP_SOUTH_1, payload, null);
-                    if (response.getStatusLine().getStatusCode() != 200) {
-                        String responseModelString = PayloadHelper.parseHttpPayloadToResponseModelString(response);
-                        return sendResponse(response.getStatusLine().getStatusCode(), ResponseModel.jsonResponseModel("FAILED AUTH CALL : " + responseModelString, null));
-                    }
-                    ResponseModel responseModel = PayloadHelper.parseHttpPayloadToResponseModelObj(response);
-                    String token = (String) responseModel.getData();
-                    return sendResponse(200, ResponseModel.jsonResponseModel("Successfully Generated JWT Token", token));
+                    return RequestHandlerService.getInstance().LoginHandler(body);
                 }
                 case "PUT" -> {
                     //CASE SIGN UP
-                    UserEntity user = PayloadHelper.parseUserFromPayload(body);
-                    String payload = PayloadHelper.createUserPayload(user, "user.createUser");
-                    HttpResponse response = callService.invokeAWSEndpoint(ConnectionType.POST, dbEndpoint, "execute-api", Region.AP_SOUTH_1, payload, null);
-                    String responseModelString = PayloadHelper.parseHttpPayloadToResponseModelString(response);
-                    return sendResponse(response.getStatusLine().getStatusCode(), responseModelString);
+                    return RequestHandlerService.getInstance().SignUpHandler(body);
                 }
                 case "GET" -> {
                     //CASE GET USER USING JWT TOKEN
@@ -106,23 +84,16 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
             }
         } catch (InvalidAuthorizatonHeaderException e) {
 
-            errMsg = generateErrorMsgWithStack(e);
+            errMsg = ErrorMsgGenerator.generateErrorString(e);
             errCode = 401;
         } catch (Exception e) {
-            errMsg = generateErrorMsgWithStack(e);
+            errMsg = ErrorMsgGenerator.generateErrorString(e);
             errCode = 500;
         }
         return sendResponse(errCode, ResponseModel.jsonResponseModel(errMsg, null));
 
     }
 
-    private String generateErrorMsgWithStack(Throwable e) {
-        String msgg = e.getMessage();
-        for (var s : e.getStackTrace()) {
-            msgg = msgg + s.toString() + "\n";
-        }
-        return msgg;
-    }
 
 
     private APIGatewayProxyResponseEvent sendResponse(int statusCode, String body) {

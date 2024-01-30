@@ -27,10 +27,7 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
                 throw new EmptyPayloadException("Empty Payload");
             }
             Map bodyMap = new Gson().fromJson(body, Map.class);
-
-
             String action = (String) bodyMap.get("action");
-
             if (action == null || action.isBlank() || action.isEmpty()) {
                 throw new InvalidActionInPayloadException("Invalid Action in Payload");
             }
