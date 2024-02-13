@@ -66,7 +66,12 @@ public class RequestHandlerService {
             String respPayload = EntityUtils.toString(response.getEntity());
             Map<String, String> respPayloadMap = gson.fromJson(respPayload, RequestHandlerHelper.getMapType(String.class, String.class));
             String token = respPayloadMap.get("data");
-            return new APIGatewayProxyResponseEvent().withStatusCode(200).withBody(ResponseModel.jsonResponseModel("Generated JWT Token with userId as Claim", token));
+            // Create a map for headers
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Access-Control-Allow-Origin", "*"); // Allow requests from any origin
+            headers.put("Access-Control-Allow-Methods", "POST,GET,OPTIONS"); // Allow specific methods
+            headers.put("Access-Control-Allow-Headers", "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"); // Allow specific headers
+            return new APIGatewayProxyResponseEvent().withStatusCode(200).withBody(ResponseModel.jsonResponseModel("Generated JWT Token with userId as Claim", token)).withHeaders(headers);
         } catch (Exception e) {
             errCode = 500;
             errMsg = ErrorMsgGenerator.generateErrorString(e);
@@ -99,7 +104,12 @@ public class RequestHandlerService {
             if (response.getStatusLine().getStatusCode() != 200) {
                 return new APIGatewayProxyResponseEvent().withStatusCode(response.getStatusLine().getStatusCode()).withBody(ResponseModel.jsonResponseModel("Failed Db Call For Signup. Db's Response = " + EntityUtils.toString(response.getEntity()), null));
             }
-            return new APIGatewayProxyResponseEvent().withBody(ResponseModel.jsonResponseModel("Created user successfully.", null)).withStatusCode(200);
+            // Create a map for headers
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Access-Control-Allow-Origin", "*"); // Allow requests from any origin
+            headers.put("Access-Control-Allow-Methods", "POST,GET,OPTIONS"); // Allow specific methods
+            headers.put("Access-Control-Allow-Headers", "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"); // Allow specific headers
+            return new APIGatewayProxyResponseEvent().withBody(ResponseModel.jsonResponseModel("Created user successfully.", null)).withStatusCode(200).withHeaders(headers);
 
         } catch (Exception e) {
             errCode = 500;

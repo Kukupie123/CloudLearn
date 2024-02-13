@@ -6,10 +6,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import kuku.OS.model.ResponseModel;
 import kuku.OS.model.customExceptions.InvalidAuthorizatonHeaderException;
-import kuku.OS.service.APICallService;
 import kuku.OS.service.RequestHandlerService;
 import kuku.OS.util.EnvironmentVariablesUtil;
 import kuku.OS.util.ErrorMsgGenerator;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -17,11 +19,7 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent requestEvent, Context context) {
         int errCode = 469;
         String errMsg = "Uninitialised Error Message";
-        String dbEndpoint = "https://7fkgoc5qr4.execute-api.ap-south-1.amazonaws.com/DEV/private/db-service";
-        String authEndpoint = "https://7fkgoc5qr4.execute-api.ap-south-1.amazonaws.com/DEV/private/authService";
         var log = context.getLogger();
-
-        APICallService callService = APICallService.getInstance();
         String method = requestEvent.getHttpMethod().toUpperCase();
         //Global Exception Catcher
         try {
@@ -62,7 +60,13 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
 
 
     private APIGatewayProxyResponseEvent sendResponse(int statusCode, String body) {
-        return new APIGatewayProxyResponseEvent().withStatusCode(statusCode).withBody(body);
+        // Create a map for headers
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Access-Control-Allow-Origin", "*"); // Allow requests from any origin
+        headers.put("Access-Control-Allow-Methods", "POST,GET,OPTIONS"); // Allow specific methods
+        headers.put("Access-Control-Allow-Headers", "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"); // Allow specific headers
+
+        return new APIGatewayProxyResponseEvent().withStatusCode(statusCode).withBody(body).withHeaders(headers);
     }
 
 }

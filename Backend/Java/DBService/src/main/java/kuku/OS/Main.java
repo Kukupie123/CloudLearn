@@ -16,6 +16,7 @@ import org.javatuples.Pair;
 import java.io.FileNotFoundException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.HashMap;
 import java.util.Map;
 
 
@@ -120,6 +121,11 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
      */
     ///NOTE : private <T> is used to specify the type of T for ResponseModel as it is a class with Generics
     private <T> APIGatewayProxyResponseEvent sendResponse(ResponseModel<T> resp, int statusCode) {
-        return new APIGatewayProxyResponseEvent().withBody(gson.toJson(resp)).withStatusCode(statusCode);
+        Map header = new HashMap();
+        header.put("Access-Control-Allow-Origin", "*");
+        header.put("Control-Allow-Methods", "*");
+        //Access-Control-Allow-Headers: 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
+        header.put("Access-Control-Allow-Headers", "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token");
+        return new APIGatewayProxyResponseEvent().withBody(gson.toJson(resp)).withStatusCode(statusCode).withHeaders(header);
     }
 }

@@ -13,6 +13,7 @@ import kuku.OS.model.exception.InvalidActionInPayloadException;
 import kuku.OS.service.PayloadActionService;
 import kuku.OS.utils.EnvironmentVariablesUtil;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -56,6 +57,12 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
     }
 
     private APIGatewayProxyResponseEvent sendResponse(String body, int statusCode) {
-        return new APIGatewayProxyResponseEvent().withBody(body).withStatusCode(statusCode);
+        Map header = new HashMap();
+        header.put("Access-Control-Allow-Origin", "*");
+        header.put("Control-Allow-Methods", "*");
+        //Access-Control-Allow-Headers: 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
+        header.put("Access-Control-Allow-Headers", "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token");
+
+        return new APIGatewayProxyResponseEvent().withBody(body).withStatusCode(statusCode).withHeaders(header);
     }
 }

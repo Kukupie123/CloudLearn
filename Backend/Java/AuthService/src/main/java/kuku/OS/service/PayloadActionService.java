@@ -101,7 +101,6 @@ public class PayloadActionService {
             errorMsg = e.getMessage();
         }
         return new APIGatewayProxyResponseEvent().withStatusCode(errorStatusCode).withBody(ResponseModel.jsonResponseModel(errorMsg, null));
-
     }
 }
 
