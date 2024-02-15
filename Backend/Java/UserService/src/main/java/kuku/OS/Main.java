@@ -29,6 +29,7 @@ public class Main implements RequestHandler<APIGatewayProxyRequestEvent, APIGate
 
             switch (method) {
                 case "POST" -> {
+                    //CASE LOGIn
                     return RequestHandlerService.getInstance().LoginHandler(body);
                 }
                 case "PUT" -> {
