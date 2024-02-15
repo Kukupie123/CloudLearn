@@ -53,7 +53,7 @@ public class RequestHandlerService {
                 headers.put("Access-Control-Allow-Origin", "*"); // Allow requests from any origin
                 headers.put("Access-Control-Allow-Methods", "POST,GET,OPTIONS"); // Allow specific methods
                 headers.put("Access-Control-Allow-Headers", "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"); // Allow specific headers
-                return new APIGatewayProxyResponseEvent().withStatusCode(response.getStatusLine().getStatusCode()).withBody(ResponseModel.jsonResponseModel("Failed DB Call For Login. DB's Response = " + EntityUtils.toString(response.getEntity()), null)).withHeaders(headers);
+                return new APIGatewayProxyResponseEvent().withStatusCode(403).withBody(ResponseModel.jsonResponseModel("Failed DB Call For Login. DB's Response = " + EntityUtils.toString(response.getEntity()), null)).withHeaders(headers);
             }
             //3. Since user was found in record we can make Auth Service generate JWT Token
             Map<String, String> jwtClaims = new HashMap<>(); //Create claim to store in Jwt token
