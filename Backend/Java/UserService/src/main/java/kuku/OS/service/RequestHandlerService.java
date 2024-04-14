@@ -87,6 +87,12 @@ public class RequestHandlerService {
     public APIGatewayProxyResponseEvent SignUpHandler(String body) {
         int errCode;
         String errMsg;
+        // Create a map for headers
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Access-Control-Allow-Origin", "*"); // Allow requests from any origin
+        headers.put("Access-Control-Allow-Methods", "POST,GET,OPTIONS"); // Allow specific methods
+        headers.put("Access-Control-Allow-Headers", "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"); // Allow specific headers
+
         try {
             //1. Parse Payload to get user data
             Map<String, String> bodyMap = gson.fromJson(body, RequestHandlerHelper.getMapType(String.class, String.class));
@@ -106,20 +112,25 @@ public class RequestHandlerService {
             String payload = gson.toJson(payloadMap);
             HttpResponse response = APICallService.getInstance().invokeAWSEndpoint(ConnectionType.POST, dbEndpoint, "execute-api", Region.AP_SOUTH_1, payload, null);
             if (response.getStatusLine().getStatusCode() != 200) {
-                return new APIGatewayProxyResponseEvent().withStatusCode(response.getStatusLine().getStatusCode()).withBody(ResponseModel.jsonResponseModel("Failed Db Call For Signup. Db's Response = " + EntityUtils.toString(response.getEntity()), null));
+                return new APIGatewayProxyResponseEvent()
+                        .withStatusCode(response.getStatusLine().getStatusCode())
+                        .withBody(ResponseModel.jsonResponseModel("Failed Db Call For Signup. Db's Response = " + EntityUtils.toString(response.getEntity()), null))
+                        .withHeaders(headers);
             }
-            // Create a map for headers
-            Map<String, String> headers = new HashMap<>();
-            headers.put("Access-Control-Allow-Origin", "*"); // Allow requests from any origin
-            headers.put("Access-Control-Allow-Methods", "POST,GET,OPTIONS"); // Allow specific methods
-            headers.put("Access-Control-Allow-Headers", "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"); // Allow specific headers
-            return new APIGatewayProxyResponseEvent().withBody(ResponseModel.jsonResponseModel("Created user successfully.", null)).withStatusCode(200).withHeaders(headers);
+            return new APIGatewayProxyResponseEvent()
+                    .withBody(ResponseModel.jsonResponseModel("Created user successfully.", null))
+                    .withStatusCode(200)
+                    .withHeaders(headers);
 
         } catch (Exception e) {
             errCode = 500;
             errMsg = ErrorMsgGenerator.generateErrorString(e);
         }
-        return new APIGatewayProxyResponseEvent().withStatusCode(errCode).withBody(ResponseModel.jsonResponseModel(errMsg, null));
+
+        return new APIGatewayProxyResponseEvent()
+                .withStatusCode(errCode).
+                withBody(ResponseModel.jsonResponseModel(errMsg, null))
+                .withHeaders(headers);
     }
 
     public APIGatewayProxyResponseEvent GetUserDataWithJWTToken(String token) {
